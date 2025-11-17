@@ -20,6 +20,7 @@
   "homepage": "https://github.com/Manubus77/JTracker-backend#readme",
   "description": "",
   "dependencies": {
+    "@prisma/client": "^6.19.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -29,9 +30,10 @@
   },
   "devDependencies": {
     "chai": "^6.2.1",
-    "mocha": "^11.7.5",
     "cross-env": "^7.0.3",
+    "mocha": "^11.7.5",
     "nodemon": "^3.1.11",
+    "prisma": "^6.19.0",
     "supertest": "^7.1.4"
   }
 }

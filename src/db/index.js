@@ -12,8 +12,19 @@ const pool = new Pool({
 
 const query = (text, params) => pool.query(text, params);
 
+// Test database connection
+const testConnection = async () => {
+  try {
+    const result = await pool.query('SELECT NOW()');
+    return { connected: true, timestamp: result.rows[0].now };
+  } catch (error) {
+    return { connected: false, error: error.message };
+  }
+};
+
 module.exports = {
   pool,
   query,
+  testConnection,
 };
 
