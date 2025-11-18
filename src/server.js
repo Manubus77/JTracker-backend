@@ -1,9 +1,21 @@
 const express = require('express');
 const config = require('./config');
+const prisma = require('./utils/prisma');
 const { testConnection } = require('./db');
 
 const app = express();
 
+async function connectPrisma() {  
+  try {
+    await prisma.$connect();
+    console.log('PrismaConnected to database');
+  } catch (error) {
+    console.error('Prisma connection error:', error);
+    process.exit(1);
+  }
+}
+//Connect to Prisma
+connectPrisma();
 app.use(express.json());
 
 app.get('/health', (req, res) => {
@@ -12,20 +24,21 @@ app.get('/health', (req, res) => {
     environment: config.env,
   });
 });
-
+//Test DB Connection with Prisma
 app.get('/health/db', async (req, res) => {
-  const dbStatus = await testConnection();
-  if (dbStatus.connected) {
+  try {
+    const result = await prisma.$queryRaw`SELECT NOW()`;
     res.json({
       status: 'ok',
       database: 'connected',
-      timestamp: dbStatus.timestamp,
+      timestamp: result[0].now,
     });
-  } else {
-    res.status(503).json({
+  } catch (error) {
+    console.error('Database connection error:', error);
+    res.status(500).json({
       status: 'error',
       database: 'disconnected',
-      error: dbStatus.error,
+      error: error.message,
     });
   }
 });
@@ -47,3 +60,8 @@ module.exports = {
   start,
 };
 
+process.on('SIGINT', async () => {
+  console.log('\nShutting down server...');
+  await prisma.$disconnect();
+  process.exit(0);
+});

@@ -5,11 +5,76 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
+  output   = "../src/generated"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+
+// =========================
+// ENUMS
+// =========================
+
+enum ApplicationStatus {
+  APPLIED
+  INTERVIEWING
+  REJECTED
+  OFFER
+}
+
+enum FileType {
+  CV
+  COVER_LETTER
+  OTHER
+}
+
+// =========================
+// MODELS
+// =========================
+
+// USERS
+model User {
+  id           Int               @id @default(autoincrement())
+  email        String            @unique
+  password     String
+  name         String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  applications JobApplication[]
+  files        File[]
+}
+
+// JOB APPLICATIONS
+model JobApplication {
+  id              Int       @id @default(autoincrement())
+  position        String
+  company         String
+  url             String?
+  status          ApplicationStatus @default(APPLIED)
+  appliedAt       DateTime          @default(now())
+
+  userId          Int
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  files           File[]
+}
+
+// FILES
+model File {
+  id                 Int             @id @default(autoincrement())
+  type               FileType
+  filename           String
+  url                String
+  uploadedAt         DateTime        @default(now())
+
+  userId             Int
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  jobApplicationId   Int?
+  jobApplication     JobApplication? @relation(fields: [jobApplicationId], references: [id], onDelete: Cascade)
 }
