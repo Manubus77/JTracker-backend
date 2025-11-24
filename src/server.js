@@ -14,8 +14,6 @@ async function connectPrisma() {
     process.exit(1);
   }
 }
-//Connect to Prisma
-connectPrisma();
 app.use(express.json());
 
 app.get('/health', (req, res) => {
@@ -43,7 +41,8 @@ app.get('/health/db', async (req, res) => {
   }
 });
 
-const start = () => {
+const start = async () => {
+  await connectPrisma();
   const server = app.listen(config.port, () => {
     console.log(`Server running in ${config.env} mode on port ${config.port}`);
   });
@@ -52,7 +51,10 @@ const start = () => {
 };
 
 if (require.main === module) {
-  start();
+  start().catch((error) => {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  });
 }
 
 module.exports = {

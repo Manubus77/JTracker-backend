@@ -36,4 +36,4 @@ pids/
 Thumbs.db
 
 
-/src/generated/prisma
+/src/generated/
