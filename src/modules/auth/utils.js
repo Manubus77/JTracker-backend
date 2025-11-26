@@ -17,18 +17,43 @@ const comparePassword = async (password, hash) => {
 };
 
 //Generate JWT
-const maxAge = 1 * 60 * 60; // 1 hour in seconds
-const generateToken = (payload) => {
-    if (!config.jwtSecret) {
+const maxAge = parseInt(process.env.JWT_EXPIRES_IN, 10) || 3600; //1hour
+const generateToken = (payload, options = {}) => {
+    if (!process.env.JWT_SECRET) {
         throw new Error('JWT_SECRET is not configured');
     }
-    return jwt.sign(payload, config.jwtSecret, {
-        expiresIn: maxAge,
+    if(!payload || Object.keys(payload).length === 0) {
+        throw new Error('Payload cannot be empty, null or undefined');
+    }
+    if (typeof payload !== 'object' || Array.isArray(payload)) {
+        throw new Error('Payload must be a non-array object');
+    }
+    return jwt.sign(payload, process.env.JWT_SECRET, {
+        expiresIn: options.expiresIn || maxAge,
     });
+};
+
+//Verify generated Token
+const verifyToken = (token) => {
+    if (!token || typeof token !== 'string') {
+        throw new Error('Token must be a non-empty string');
+    }
+    try {
+        return jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+        if (err.name === 'TokenExpiredError') {
+            return null; // token expired
+        }
+        if (err.name === 'JsonWebTokenError') {
+            return null; // invalid/malformed token
+        }
+        throw err; // unexpected errors are re-thrown
+    }
 };
 
 module.exports = {
     hashPassword,
     comparePassword,
     generateToken,
+    verifyToken
 };
