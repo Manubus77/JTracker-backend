@@ -5,7 +5,7 @@ const bcrypt = require('bcrypt');
 
 const { hashPassword, comparePassword, generateToken, verifyToken } = authUtils;
 
-describe.only('Auth Utils', () => {
+describe('Auth Utils', () => {
     describe('hashPassword', () => {
         it('returns a string hash', async () => {
             //Definition
