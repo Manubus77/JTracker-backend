@@ -29,7 +29,8 @@
 
 ### Service Layer
 - Contains business logic
-- **Input validation**: Validate all inputs (null, undefined, empty strings, format, etc.)
+- **Input validation**: Uses Zod schemas for declarative validation (see `docs/validation-rules.md`)
+- Validation schemas defined in `validations.js` files per module
 - Calls model layer functions
 - Handles error transformation and business rules
 - Orchestrates multiple model calls if needed

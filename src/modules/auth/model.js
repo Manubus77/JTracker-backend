@@ -50,8 +50,27 @@ const findUserById = async (id) => {
     return user;
 };
 
+// Internal use only: Find user by email including password hash (for authentication)
+const findUserByEmailWithPassword = async (email) => {
+    const user = await prisma.user.findUnique({
+        where: {
+            email: email,
+        },
+        select: {
+            id: true,
+            email: true,
+            name: true,
+            password: true,
+            createdAt: true,
+            updatedAt: true,
+        }
+    });
+    return user;
+};
+
 module.exports = {
     createUser,
     findUserByEmail,
     findUserById,
+    findUserByEmailWithPassword,
 };

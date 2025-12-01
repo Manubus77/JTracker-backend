@@ -22,6 +22,11 @@
 - **nodemon** - Development server auto-reload
 - **cross-env** - Cross-platform environment variables
 
+### Validation
+- **Zod** - Schema validation library for runtime type checking and validation
+- Declarative validation schemas in `validations.js` files per module
+- See `docs/validation-rules.md` for detailed validation rules
+
 ## Key Decisions
 
 ### Database Layer

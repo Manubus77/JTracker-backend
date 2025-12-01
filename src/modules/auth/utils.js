@@ -7,6 +7,9 @@ const hashPassword = async (password) => {
     if(!password) throw new Error('Password is required');
     if(typeof password !== 'string') throw new Error('Password must be a string');
     if(password.length < 8) throw new Error('Password must be at least 8 characters long');
+    if(password.length > 15) throw new Error('Password must be at most 15 characters long');
+    if(!/[A-Z]/.test(password)) throw new Error('Password must contain at least one capital letter');
+    if(!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) throw new Error('Password must contain at least one symbol');
     return await bcrypt.hash(password, 10);
 };
 
