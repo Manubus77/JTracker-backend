@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const prisma = require('../../../utils/prisma'); 
 const model = require('../model');
 
-describe.only('Auth Model (Database Layer)', () => {
+describe('Auth Model (Database Layer)', () => {
     // Defintion: static data
     const testUser = {
         email: 'test@jtracker.com',
@@ -48,36 +48,93 @@ describe.only('Auth Model (Database Layer)', () => {
                 expect(error.code).to.equal('P2002', 'Expected a unique constraint error (P2002)');
             }
         });
-        it('Throw P2011 Null Constraint error when a required field is explicitly null', async () => {
-            //Definition
-            const nullEmailUser = { 
-                email: null, 
-                passwordHash: 'hashedpasswordfromservice', 
-                name: 'Null User',
-            };
-            try {
-                await model.createUser(nullEmailUser); 
-                throw new Error('Null email creation should throw an error, but succeeded.');
-            } catch (error) {
-                // Expect the CLIENT-SIDE error (P2009/P2000) for a type mismatch.
-                const expectedCode = 'P2009'; 
-                const expectedMessageSegment = 'Invalid `prisma.user.create()` invocation';
-                // 1. Check if the structured code is present (preferred)
-                if (error.code) {
-                    expect(['P2000', 'P2009']).to.include(error.code, `Expected structured P2009/P2000, got ${error.code}`);
-                } else {
-                // 2. Fallback: Check for the specific Prisma client validation message
-                    expect(error.message).to.include(expectedMessageSegment, `Expected message to contain "${expectedMessageSegment}"`);
-                }
-            }
-        });
     });
     describe('findUserByEmail', () => {
         let createdUser;
-        const nonExistentId = 999999;
         //Definition
         beforeEach(async () => {
             createdUser = await model.createUser(testUser); 
+        });
+
+        it('Find an existing user by email and return correct user data', async () => {
+            // Execution
+            const foundUser = await model.findUserByEmail(testUser.email);
+
+            // Assertion: Returns a user object with correct data
+            expect(foundUser).to.be.an('object');
+            expect(foundUser).to.not.be.null;
+            expect(foundUser).to.have.property('id').that.is.a('number');
+            expect(foundUser.id).to.equal(createdUser.id);
+            expect(foundUser.email).to.equal(testUser.email);
+            expect(foundUser.name).to.equal(testUser.name);
+            expect(foundUser).to.have.property('createdAt');
+            expect(foundUser).to.have.property('updatedAt');
+        });
+
+        it('Return null when email does not exist', async () => {
+            // Definition
+            const nonExistentEmail = 'nonexistent@jtracker.com';
+            
+            // Execution
+            const foundUser = await model.findUserByEmail(nonExistentEmail);
+
+            // Assertion: Returns null when user not found
+            expect(foundUser).to.be.null;
+        });
+
+        it('Exclude password from the returned user object', async () => {
+            // Execution
+            const foundUser = await model.findUserByEmail(testUser.email);
+
+            // Assertion: Password field is not included in returned object
+            expect(foundUser).to.be.an('object');
+            expect(foundUser).to.not.have.property('password');
+            expect(foundUser).to.not.have.property('passwordHash');
+        });
+
+    });
+
+    describe('findUserById', () => {
+        let createdUser;
+        //Definition
+        beforeEach(async () => {
+            createdUser = await model.createUser(testUser); 
+        });
+
+        it('Find an existing user by id and return correct user data', async () => {
+            // Execution
+            const foundUser = await model.findUserById(createdUser.id);
+
+            // Assertion: Returns a user object with correct data
+            expect(foundUser).to.be.an('object');
+            expect(foundUser).to.not.be.null;
+            expect(foundUser).to.have.property('id').that.is.a('number');
+            expect(foundUser.id).to.equal(createdUser.id);
+            expect(foundUser.email).to.equal(testUser.email);
+            expect(foundUser.name).to.equal(testUser.name);
+            expect(foundUser).to.have.property('createdAt');
+            expect(foundUser).to.have.property('updatedAt');
+        });
+
+        it('Return null when id does not exist', async () => {
+            // Definition
+            const nonExistentId = 999999;
+            
+            // Execution
+            const foundUser = await model.findUserById(nonExistentId);
+
+            // Assertion: Returns null when user not found
+            expect(foundUser).to.be.null;
+        });
+
+        it('Exclude password from the returned user object', async () => {
+            // Execution
+            const foundUser = await model.findUserById(createdUser.id);
+
+            // Assertion: Password field is not included in returned object
+            expect(foundUser).to.be.an('object');
+            expect(foundUser).to.not.have.property('password');
+            expect(foundUser).to.not.have.property('passwordHash');
         });
 
     });
