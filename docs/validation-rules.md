@@ -39,20 +39,22 @@ This document contains all validation schemas and rules used in the JTracker bac
      - No capital: "Password must contain at least one capital letter"
      - No symbol: "Password must contain at least one symbol"
 
-3. **name** (optional)
-   - Type: `string | null | undefined`
+3. **name** (required)
+   - Type: `string`
    - Validation Rules:
-     - If provided, must be a string
-     - Automatically trimmed if provided
-     - Can be `null` or `undefined`
-   - No error messages (optional field)
+     - Must be a non-empty string (after trimming)
+     - Automatically trimmed (leading/trailing whitespace removed)
+   - Error Messages:
+     - Missing: "Name is required"
+     - Invalid type: "Name must be a string"
+     - Empty after trim: "Name must be a non-empty string"
 
 **Example Valid Data**:
 ```javascript
 {
   email: 'user@example.com',
   password: 'TestPass123!',
-  name: 'John Doe' // optional
+  name: 'John Doe' // required
 }
 ```
 

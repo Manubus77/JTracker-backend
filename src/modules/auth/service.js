@@ -20,14 +20,14 @@ const register = async (data) => {
         throw new Error('Email already exists');
     }
 
-    // Hash password (this will also validate password length)
+    // Hash password (also validates password length)
     const passwordHash = await utils.hashPassword(validated.password);
 
     // Create user
     const user = await model.createUser({
         email: validated.email, // Already trimmed by schema
         passwordHash,
-        name: validated.name ? validated.name.trim() : null,
+        name: validated.name, // Already trimmed by schema
     });
 
     // Generate token
@@ -49,17 +49,15 @@ const login = async (data) => {
         password: data?.password,
     };
     
-    // Validate input using Zod schema (email is already trimmed by schema)
-    // All validation errors should return "Invalid credentials" for security
+    // Validate input using Zod schema
     let validated;
     try {
         validated = loginSchema.parse(dataToValidate);
     } catch (error) {
-        // All login validation errors return generic message for security
         throw new Error('Invalid credentials');
     }
 
-    // Find user with password hash (for authentication)
+    // Find user with password hash
     const user = await model.findUserByEmailWithPassword(validated.email);
     if (!user) {
         throw new Error('Invalid credentials');

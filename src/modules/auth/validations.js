@@ -31,9 +31,14 @@ const registerSchema = z.object({
         .regex(/[A-Z]/, 'Password must contain at least one capital letter')
         .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/, 'Password must contain at least one symbol'),
     
-    name: z.string()
-        .optional()
-        .nullable()
+    name: z.preprocess(
+        (val) => typeof val === 'string' ? val.trim() : val,
+        z.string({
+            required_error: 'Name is required',
+            invalid_type_error: 'Name must be a string'
+        })
+            .min(1, 'Name must be a non-empty string')
+    )
 });
 
 /**

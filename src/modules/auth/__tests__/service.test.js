@@ -289,20 +289,22 @@ describe('Auth (Business Logic Layer)', () => {
             expect(decoded.email).to.equal(validUserData.email);
         });
 
-        it('Accept name as optional parameter', async () => {
+        it('Throw error when name is missing', async () => {
             // Definition
             const userDataWithoutName = {
                 email: 'noname@jtracker.com',
                 password: 'TestPass123!',
             };
 
-            // Execution
-            const result = await service.register(userDataWithoutName);
-
-            // Assertion: Registration succeeds without name
-            expect(result).to.be.an('object');
-            expect(result.user).to.have.property('id');
-            expect(result.user.email).to.equal(userDataWithoutName.email);
+            // Execution & Assertion
+            try {
+                await service.register(userDataWithoutName);
+                expect.fail('Should have thrown an error');
+            } catch (error) {
+                expect(error).to.be.an('Error');
+                expect(error.message.toLowerCase()).to.include('name');
+                expect(error.message.toLowerCase()).to.include('required');
+            }
         });
 
         it('Trim email before validation and storage', async () => {
@@ -326,6 +328,7 @@ describe('Auth (Business Logic Layer)', () => {
             await service.register({
                 email: 'duplicate@jtracker.com',
                 password: 'TestPass123!',
+                name: 'Test User',
             });
 
             // Execution and Assertion: Try to register with same email but with spaces
@@ -333,6 +336,7 @@ describe('Auth (Business Logic Layer)', () => {
                 await service.register({
                     email: '  duplicate@jtracker.com  ',
                     password: 'TestPass123!',
+                    name: 'Test User',
                 });
                 throw new Error('Should have thrown an error for duplicate email with spaces');
             } catch (error) {
