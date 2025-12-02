@@ -1,6 +1,7 @@
 const model = require('./model');
 const utils = require('./utils');
-const { registerSchema, parseWithErrorHandling } = require('./validations');
+const { z } = require('zod');
+const { registerSchema, loginSchema, tokenSchema, parseWithErrorHandling } = require('./validations');
 
 const register = async (data) => {
     // Ensure data is an object and has all required fields (even if undefined)
@@ -41,31 +42,31 @@ const register = async (data) => {
     };
 };
 
-const login = async ({ email, password }) => {
-    // Input validation: Email
-    if (!email || email === null || email === undefined) {
-        throw new Error('Invalid credentials');
-    }
-    if (typeof email !== 'string' || email.trim() === '') {
-        throw new Error('Invalid credentials');
-    }
-
-    // Input validation: Password
-    if (!password || password === null || password === undefined) {
-        throw new Error('Invalid credentials');
-    }
-    if (typeof password !== 'string' || password.trim() === '') {
+const login = async (data) => {
+    // Ensure data is an object and has all required fields (even if undefined)
+    const dataToValidate = {
+        email: data?.email,
+        password: data?.password,
+    };
+    
+    // Validate input using Zod schema (email is already trimmed by schema)
+    // All validation errors should return "Invalid credentials" for security
+    let validated;
+    try {
+        validated = loginSchema.parse(dataToValidate);
+    } catch (error) {
+        // All login validation errors return generic message for security
         throw new Error('Invalid credentials');
     }
 
     // Find user with password hash (for authentication)
-    const user = await model.findUserByEmailWithPassword(email.trim());
+    const user = await model.findUserByEmailWithPassword(validated.email);
     if (!user) {
         throw new Error('Invalid credentials');
     }
 
     // Compare password
-    const isPasswordValid = await utils.comparePassword(password, user.password);
+    const isPasswordValid = await utils.comparePassword(validated.password, user.password);
     if (!isPasswordValid) {
         throw new Error('Invalid credentials');
     }
@@ -86,16 +87,35 @@ const login = async ({ email, password }) => {
 };
 
 const getCurrentUser = async (token) => {
-    // Input validation: Token
-    if (!token || token === null || token === undefined) {
-        throw new Error('Token is required');
-    }
-    if (typeof token !== 'string' || token.trim() === '') {
-        throw new Error('Token must be a non-empty string');
+    // Validate token using Zod schema (tokenSchema is a string schema)
+    let validatedToken;
+    try {
+        validatedToken = tokenSchema.parse(token);
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            const errors = error.issues || error.errors || [];
+            if (errors.length > 0) {
+                const firstError = errors[0];
+                let errorMessage = firstError.message || String(firstError);
+                
+                // Ensure error message includes "token" for test compatibility
+                if (!errorMessage.toLowerCase().includes('token')) {
+                    if (errorMessage.toLowerCase().includes('received undefined') || 
+                        errorMessage.toLowerCase().includes('required') ||
+                        errorMessage.toLowerCase().includes('expected string')) {
+                        errorMessage = 'Token is required';
+                    } else {
+                        errorMessage = `Token: ${errorMessage}`;
+                    }
+                }
+                throw new Error(errorMessage);
+            }
+        }
+        throw error;
     }
 
     // Verify token
-    const decoded = utils.verifyToken(token.trim());
+    const decoded = utils.verifyToken(validatedToken);
     if (!decoded) {
         throw new Error('Invalid or expired token');
     }

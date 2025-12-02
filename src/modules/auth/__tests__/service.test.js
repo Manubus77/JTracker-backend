@@ -4,7 +4,7 @@ const service = require('../service');
 const model = require('../model');
 const utils = require('../utils');
 
-describe.only('Auth (Business Logic Layer)', () => {
+describe('Auth (Business Logic Layer)', () => {
     // Definition: static data
     const validUserData = {
         email: 'test@jtracker.com',

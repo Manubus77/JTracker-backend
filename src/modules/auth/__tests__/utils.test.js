@@ -9,7 +9,7 @@ describe('Auth Utils', () => {
     describe('hashPassword', () => {
         it('returns a string hash', async () => {
             //Definition
-            const password = 'testpassword';
+            const password = 'TestPass123!'; // Valid: 8-15 chars, has capital, has symbol
             //Execution
             const hash = await hashPassword(password);
             //Assertion
@@ -18,7 +18,7 @@ describe('Auth Utils', () => {
 
         it('does not return the original password', async () => {
             //Definition
-            const password = 'testpassword';
+            const password = 'TestPass123!';
             //Execution
             const hash = await hashPassword(password);
             //Assertion
@@ -27,7 +27,7 @@ describe('Auth Utils', () => {
 
         it('can be verified with bcrypt', async () => {
             //Definition
-            const password = 'testpassword';
+            const password = 'TestPass123!';
             //Execution
             const hash = await hashPassword(password);
             const result = await bcrypt.compare(password, hash);
@@ -37,7 +37,7 @@ describe('Auth Utils', () => {
 
         it('produces a different hash each time', async () => {
             //Definition
-            const password = 'testpassword';
+            const password = 'TestPass123!';
             //Execution
             const hash1 = await hashPassword(password);
             const hash2 = await hashPassword(password);
@@ -48,7 +48,7 @@ describe('Auth Utils', () => {
     describe('comparePassword', () => {
         it('compares a password with a hash', async () => {
             //Definition
-            const password = 'testpassword';
+            const password = 'TestPass123!';
             const hash = await hashPassword(password);
             //Execution
             const result = await comparePassword(password, hash);
@@ -57,8 +57,8 @@ describe('Auth Utils', () => {
         });
         it('compares a wrong password with hash and return false', async () => {
             //Definition
-            const password = 'testpassword';
-            const wrongPassword = 'wrongpass';
+            const password = 'TestPass123!';
+            const wrongPassword = 'WrongPass123!';
             const hash = await hashPassword(password);
             //Execution
             const result = await comparePassword(wrongPassword, hash);
@@ -67,7 +67,7 @@ describe('Auth Utils', () => {
         });
         it('returns false if the password is empty', async () => {
             //Definition
-            const password = 'testpassword';
+            const password = 'TestPass123!';
             const hash = await hashPassword(password);
             //Execution
             const result = await comparePassword('', hash);
@@ -76,7 +76,7 @@ describe('Auth Utils', () => {
         });
         it('returns false if the password is null', async () => {
             //Definition
-            const password = 'testpassword';
+            const password = 'TestPass123!';
             const hash = await hashPassword(password);
             //Executuon
             const result = await comparePassword(null, hash);
