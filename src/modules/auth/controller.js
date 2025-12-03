@@ -20,6 +20,7 @@ const register = async (req, res, next) => {
         // Determine status code based on error message
         if (message.includes('required') || 
             message.includes('must be') || 
+            message.includes('must contain') ||
             message.includes('valid') ||
             message.includes('Email must be')) {
             return res.status(400).json({ error: message });
