@@ -625,5 +625,110 @@ describe('Auth (Business Logic Layer)', () => {
             }
         });
     });
+
+    describe('logout', () => {
+        let registeredUser;
+        let validToken;
+
+        beforeEach(async () => {
+            // Register a user and get a valid token
+            const result = await service.register({
+                email: 'logout@jtracker.com',
+                password: 'LogoutPass123!',
+                name: 'Logout User',
+            });
+            registeredUser = result.user;
+            validToken = result.token;
+        });
+
+        it('Logout successfully with valid token', async () => {
+            // Execution
+            const result = await service.logout(validToken);
+
+            // Assertion: Returns success message
+            expect(result).to.be.an('object');
+            expect(result).to.have.property('message');
+            expect(result.message).to.equal('Logout successful');
+        });
+
+        it('Throw error when token is missing', async () => {
+            // Execution and Assertion
+            try {
+                await service.logout(null);
+                throw new Error('Should have thrown an error for missing token');
+            } catch (error) {
+                expect(error.message.toLowerCase()).to.include('token');
+            }
+        });
+
+        it('Throw error when token is undefined', async () => {
+            // Execution and Assertion
+            try {
+                await service.logout(undefined);
+                throw new Error('Should have thrown an error for undefined token');
+            } catch (error) {
+                expect(error.message.toLowerCase()).to.include('token');
+            }
+        });
+
+        it('Throw error when token is empty string', async () => {
+            // Execution and Assertion
+            try {
+                await service.logout('');
+                throw new Error('Should have thrown an error for empty token');
+            } catch (error) {
+                expect(error.message.toLowerCase()).to.include('token');
+            }
+        });
+
+        it('Throw error when token is invalid', async () => {
+            // Definition
+            const invalidToken = 'invalid.token.here';
+
+            // Execution and Assertion
+            try {
+                await service.logout(invalidToken);
+                throw new Error('Should have thrown an error for invalid token');
+            } catch (error) {
+                const message = error.message.toLowerCase();
+                expect(message.includes('token') || message.includes('invalid') || message.includes('expired')).to.be.true;
+            }
+        });
+
+        it('Throw error when token is expired', async () => {
+            // Definition: Generate an expired token
+            const expiredToken = utils.generateToken(
+                { userId: registeredUser.id, email: registeredUser.email },
+                { expiresIn: 1 } // 1 second
+            );
+            // Wait for expiration
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // Execution and Assertion
+            try {
+                await service.logout(expiredToken);
+                throw new Error('Should have thrown an error for expired token');
+            } catch (error) {
+                const message = error.message.toLowerCase();
+                expect(message.includes('token') || message.includes('invalid') || message.includes('expired')).to.be.true;
+            }
+        });
+
+        it('Throw error when token is missing userId', async () => {
+            // Definition: Generate token without userId
+            const tokenWithoutUserId = utils.generateToken({
+                email: 'test@jtracker.com',
+            });
+
+            // Execution and Assertion
+            try {
+                await service.logout(tokenWithoutUserId);
+                throw new Error('Should have thrown an error for token missing userId');
+            } catch (error) {
+                const message = error.message.toLowerCase();
+                expect(message.includes('token') || message.includes('userid')).to.be.true;
+            }
+        });
+    });
 });
 

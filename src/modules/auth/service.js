@@ -132,9 +132,55 @@ const getCurrentUser = async (token) => {
     return user;
 };
 
+const logout = async (token) => {
+    // Validate token using Zod schema
+    let validatedToken;
+    try {
+        validatedToken = tokenSchema.parse(token);
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            const errors = error.issues || error.errors || [];
+            if (errors.length > 0) {
+                const firstError = errors[0];
+                let errorMessage = firstError.message || String(firstError);
+                
+                // Ensure error message includes "token" for consistency
+                if (!errorMessage.toLowerCase().includes('token')) {
+                    if (errorMessage.toLowerCase().includes('received undefined') || 
+                        errorMessage.toLowerCase().includes('required') ||
+                        errorMessage.toLowerCase().includes('expected string')) {
+                        errorMessage = 'Token is required';
+                    } else {
+                        errorMessage = `Token: ${errorMessage}`;
+                    }
+                }
+                throw new Error(errorMessage);
+            }
+        }
+        throw error;
+    }
+
+    // Verify token
+    const decoded = utils.verifyToken(validatedToken);
+    if (!decoded) {
+        throw new Error('Invalid or expired token');
+    }
+
+    // Extract userId from token (validate token structure)
+    if (!decoded.userId) {
+        throw new Error('Invalid token: missing userId');
+    }
+
+    // Token is valid - logout successful
+    // Note: With stateless JWT, actual logout is client-side (delete token)
+    // This endpoint validates the token and confirms logout
+    return { message: 'Logout successful' };
+};
+
 module.exports = {
     register,
     login,
     getCurrentUser,
+    logout,
 };
 

@@ -2,7 +2,7 @@ const express = require('express');
 const config = require('./config');
 const prisma = require('./utils/prisma');
 const { testConnection } = require('./db');
-
+const authRouter = require('./modules/auth/router');
 const app = express();
 
 async function connectPrisma() {  
@@ -15,6 +15,8 @@ async function connectPrisma() {
   }
 }
 app.use(express.json());
+// Routes
+app.use('/auth', authRouter);
 
 app.get('/health', (req, res) => {
   res.json({
@@ -22,6 +24,7 @@ app.get('/health', (req, res) => {
     environment: config.env,
   });
 });
+
 //Test DB Connection with Prisma
 app.get('/health/db', async (req, res) => {
   try {
