@@ -2,6 +2,7 @@ const model = require('./model');
 const utils = require('./utils');
 const { z } = require('zod');
 const { registerSchema, loginSchema, tokenSchema, parseWithErrorHandling } = require('./validations');
+const tokenBlacklist = require('./tokenBlacklist');
 
 const register = async (data) => {
     // Ensure data is an object and has all required fields (even if undefined)
@@ -15,13 +16,17 @@ const register = async (data) => {
     const validated = parseWithErrorHandling(registerSchema, dataToValidate);
     
     // Check if user already exists (using validated email - already trimmed)
+    // Always perform password hash operation to normalize timing (prevent enumeration)
     const existingUser = await model.findUserByEmail(validated.email);
-    if (existingUser) {
-        throw new Error('Email already exists');
-    }
-
-    // Hash password (also validates password length)
+    
+    // Hash password regardless of user existence (timing attack prevention)
     const passwordHash = await utils.hashPassword(validated.password);
+    
+    // If user exists, throw generic error to prevent email enumeration
+    if (existingUser) {
+        // Use generic error message to prevent email enumeration
+        throw new Error('Registration failed');
+    }
 
     // Create user
     const user = await model.createUser({
@@ -59,13 +64,17 @@ const login = async (data) => {
 
     // Find user with password hash
     const user = await model.findUserByEmailWithPassword(validated.email);
-    if (!user) {
-        throw new Error('Invalid credentials');
-    }
-
-    // Compare password
-    const isPasswordValid = await utils.comparePassword(validated.password, user.password);
-    if (!isPasswordValid) {
+    
+    // Always perform password comparison to prevent timing attacks
+    // Use a dummy hash if user doesn't exist to normalize timing
+    const dummyHash = '$2b$10$dummyhashfordummycomparisontimingattackprevention';
+    const hashToCompare = user ? user.password : dummyHash;
+    
+    // Compare password (always executed, even if user doesn't exist)
+    const isPasswordValid = await utils.comparePassword(validated.password, hashToCompare);
+    
+    // Check both user existence and password validity
+    if (!user || !isPasswordValid) {
         throw new Error('Invalid credentials');
     }
 
@@ -112,9 +121,14 @@ const getCurrentUser = async (token) => {
         throw error;
     }
 
-    // Verify token
+    // Verify token first
     const decoded = utils.verifyToken(validatedToken);
     if (!decoded) {
+        throw new Error('Invalid or expired token');
+    }
+
+    // Check if token is blacklisted (after verification to ensure token is valid)
+    if (tokenBlacklist.isBlacklisted(validatedToken)) {
         throw new Error('Invalid or expired token');
     }
 
@@ -171,9 +185,14 @@ const logout = async (token) => {
         throw new Error('Invalid token: missing userId');
     }
 
-    // Token is valid - logout successful
-    // Note: With stateless JWT, actual logout is client-side (delete token)
-    // This endpoint validates the token and confirms logout
+    // Calculate token expiration time
+    // JWT exp is in seconds, convert to seconds remaining
+    const now = Math.floor(Date.now() / 1000);
+    const expiresIn = decoded.exp ? Math.max(0, decoded.exp - now) : 3600; // Default 1 hour if no exp
+
+    // Add token to blacklist
+    tokenBlacklist.addToBlacklist(validatedToken, expiresIn);
+
     return { message: 'Logout successful' };
 };
 

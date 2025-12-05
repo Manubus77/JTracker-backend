@@ -272,7 +272,8 @@ describe('Auth (Business Logic Layer)', () => {
                 throw new Error('Should have thrown an error for duplicate email');
             } catch (error) {
                 const message = error.message.toLowerCase();
-                expect(message.includes('email') || message.includes('already exists') || message.includes('duplicate')).to.be.true;
+                // Security: Generic error message to prevent email enumeration
+                expect(message.includes('registration failed')).to.be.true;
             }
         });
 
@@ -341,7 +342,8 @@ describe('Auth (Business Logic Layer)', () => {
                 throw new Error('Should have thrown an error for duplicate email with spaces');
             } catch (error) {
                 const message = error.message.toLowerCase();
-                expect(message.includes('email') || message.includes('already exists') || message.includes('duplicate')).to.be.true;
+                // Security: Generic error message to prevent email enumeration
+                expect(message.includes('registration failed')).to.be.true;
             }
         });
     });

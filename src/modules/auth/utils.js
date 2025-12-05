@@ -10,7 +10,8 @@ const hashPassword = async (password) => {
     if(password.length > 15) throw new Error('Password must be at most 15 characters long');
     if(!/[A-Z]/.test(password)) throw new Error('Password must contain at least one capital letter');
     if(!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) throw new Error('Password must contain at least one symbol');
-    return await bcrypt.hash(password, 10);
+    // Use salt rounds from config (validated on startup)
+    return await bcrypt.hash(password, config.bcryptSaltRounds);
 };
 
 //Compare a password with a hash

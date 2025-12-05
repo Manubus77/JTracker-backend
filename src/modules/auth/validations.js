@@ -19,6 +19,7 @@ const registerSchema = z.object({
             invalid_type_error: 'Email must be a string'
         })
             .min(1, 'Email must be a non-empty string')
+            .max(254, 'Email must be at most 254 characters long') // RFC 5321 limit
             .email('Email must be a valid email address')
     ),
     
@@ -38,6 +39,7 @@ const registerSchema = z.object({
             invalid_type_error: 'Name must be a string'
         })
             .min(1, 'Name must be a non-empty string')
+            .max(200, 'Name must be at most 200 characters long')
     )
 });
 
@@ -49,10 +51,12 @@ const registerSchema = z.object({
 const loginSchema = z.object({
     email: z.string()
         .trim()
-        .min(1, 'Invalid credentials'),
+        .min(1, 'Invalid credentials')
+        .max(254, 'Invalid credentials'), // RFC 5321 limit
     
     password: z.string()
         .min(1, 'Invalid credentials')
+        .max(1000, 'Invalid credentials') // Reasonable limit to prevent DoS
 });
 
 /**

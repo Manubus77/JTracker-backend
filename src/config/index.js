@@ -30,6 +30,53 @@ const numberOrDefault = (value, fallback) => {
   return Number.isNaN(parsed) ? fallback : parsed;
 };
 
+/**
+ * Validate configuration values on startup
+ * Throws errors if critical security settings are invalid
+ */
+const validateConfig = () => {
+  const errors = [];
+
+  // Validate JWT_SECRET
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    errors.push('JWT_SECRET environment variable is required');
+  } else if (jwtSecret.length < 32) {
+    errors.push('JWT_SECRET must be at least 32 characters long for security');
+  } else if (jwtSecret.trim().length === 0) {
+    errors.push('JWT_SECRET cannot be empty or whitespace only');
+  }
+
+  // Validate bcryptSaltRounds
+  const saltRounds = numberOrDefault(process.env.BCRYPT_SALT_ROUNDS, 10);
+  if (saltRounds < 10) {
+    errors.push('BCRYPT_SALT_ROUNDS must be at least 10 for security');
+  } else if (saltRounds > 15) {
+    errors.push('BCRYPT_SALT_ROUNDS should not exceed 15 to prevent DoS');
+  }
+
+  // Validate JWT_EXPIRES_IN
+  const jwtExpiresIn = parseInt(process.env.JWT_EXPIRES_IN, 10);
+  if (process.env.JWT_EXPIRES_IN && !isNaN(jwtExpiresIn)) {
+    const minExpiration = 15 * 60; // 15 minutes in seconds
+    const maxExpiration = 24 * 60 * 60; // 24 hours in seconds
+    if (jwtExpiresIn < minExpiration) {
+      errors.push(`JWT_EXPIRES_IN must be at least ${minExpiration} seconds (15 minutes)`);
+    } else if (jwtExpiresIn > maxExpiration) {
+      errors.push(`JWT_EXPIRES_IN should not exceed ${maxExpiration} seconds (24 hours)`);
+    }
+  }
+
+  // Validate DATABASE_URL (required in production)
+  if (environment === 'production' && !process.env.DATABASE_URL) {
+    errors.push('DATABASE_URL environment variable is required in production');
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`Configuration validation failed:\n${errors.join('\n')}`);
+  }
+};
+
 const config = {
   env: environment,
   isDevelopment: environment === 'development',
@@ -39,7 +86,20 @@ const config = {
   databaseUrl: process.env.DATABASE_URL,
   jwtSecret: process.env.JWT_SECRET,
   bcryptSaltRounds: numberOrDefault(process.env.BCRYPT_SALT_ROUNDS, 10),
+  jwtExpiresIn: parseInt(process.env.JWT_EXPIRES_IN, 10) || 3600,
+  // CORS configuration
+  corsOrigin: process.env.CORS_ORIGIN || (environment === 'production' ? undefined : '*'),
+  // Rate limiting configuration
+  rateLimitWindowMs: numberOrDefault(process.env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000), // 15 minutes
+  rateLimitMaxLogin: numberOrDefault(process.env.RATE_LIMIT_MAX_LOGIN, 5),
+  rateLimitMaxRegister: numberOrDefault(process.env.RATE_LIMIT_MAX_REGISTER, 3),
+  rateLimitMaxLogout: numberOrDefault(process.env.RATE_LIMIT_MAX_LOGOUT, 10),
 };
+
+// Validate configuration (skip in test environment to allow flexibility)
+if (environment !== 'test') {
+  validateConfig();
+}
 
 module.exports = config;
 

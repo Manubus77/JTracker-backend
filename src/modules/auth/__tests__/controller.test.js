@@ -5,12 +5,14 @@ const {app} = require('../../../server.js');
 const supertest = require('supertest');
 const utils = require('../utils');
 const service = require('../service');
+const tokenBlacklist = require('../tokenBlacklist');
 
 describe('Auth Controller (HTTP Layer)', () => {
 
-    //Clear table before each test
+    //Clear table and token blacklist before each test
     beforeEach(async () => {
         await prisma.user.deleteMany();
+        tokenBlacklist.clearBlacklist();
     });
 
     //Cleanup: Disconnect after all tests run
@@ -188,7 +190,8 @@ describe('Auth Controller (HTTP Layer)', () => {
             // Assertion
             expect(response.status).to.equal(409);
             expect(response.body).to.have.property('error');
-            expect(response.body.error.toLowerCase()).to.include('already exists');
+            // Security: Generic error message to prevent email enumeration
+            expect(response.body.error.toLowerCase()).to.include('registration failed');
         });
 
         // Security checks (HTTP response format)
@@ -473,14 +476,21 @@ describe('Auth Controller (HTTP Layer)', () => {
         let authToken;
 
         // Setup: Register and login to get token
+        // Note: Top-level beforeEach clears users, so we need to create user here
         beforeEach(async () => {
-            await supertest(app).post('/auth/register').send(testUser);
+            // Register user
+            const registerResponse = await supertest(app).post('/auth/register').send(testUser);
+            expect(registerResponse.status).to.equal(201);
+            
+            // Login to get token
             const loginResponse = await supertest(app)
                 .post('/auth/login')
                 .send({
                     email: testUser.email,
                     password: testUser.password,
                 });
+            expect(loginResponse.status).to.equal(200);
+            expect(loginResponse.body).to.have.property('token');
             authToken = loginResponse.body.token;
         });
 
