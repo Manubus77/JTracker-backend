@@ -6,6 +6,7 @@ const config = require('./config');
 const prisma = require('./utils/prisma');
 const { testConnection } = require('./db');
 const authRouter = require('./modules/auth/router');
+const applicationsRouter = require('./modules/applications/router');
 const app = express();
 
 async function connectPrisma() {  
@@ -54,6 +55,7 @@ app.use(generalLimiter);
 
 // Routes
 app.use('/auth', authRouter);
+app.use('/applications', applicationsRouter);
 
 app.get('/health', (req, res) => {
   res.json({
