@@ -27,7 +27,7 @@ app.use(helmet({
 
 // CORS Configuration
 const corsOptions = {
-  origin: config.corsOrigin === '*' ? true : (config.corsOrigin ? config.corsOrigin.split(',') : false),
+  origin: config.corsWildcard ? true : (config.corsOrigins.length > 0 ? config.corsOrigins : false),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -44,7 +44,7 @@ const generalLimiter = config.isTest
   ? (req, res, next) => next() // No-op middleware for tests
   : rateLimit({
       windowMs: config.rateLimitWindowMs,
-      max: 100, // 100 requests per window
+      max: config.rateLimitMaxGeneral, // configurable requests per window
       message: 'Too many requests from this IP, please try again later.',
       standardHeaders: true,
       legacyHeaders: false,

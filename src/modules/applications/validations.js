@@ -1,7 +1,7 @@
 const { z } = require('zod');
 
-// Allowed statuses for job applications (subset of enum for this feature)
-const ALLOWED_STATUSES = ['APPLIED', 'INTERVIEWING', 'REJECTED'];
+// Allowed statuses for job applications (aligned with enum)
+const ALLOWED_STATUSES = ['APPLIED', 'INTERVIEWING', 'REJECTED', 'OFFER', 'ACCEPTED'];
 
 // Common trimmed string field with max length
 const trimmedString = (fieldName, { max = 200, required = true } = {}) =>

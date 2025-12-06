@@ -50,11 +50,18 @@ const listApplications = async (userId, query) => {
         skip,
         take,
     });
+    const total = await model.countApplications({
+        userId,
+        status: filters.status,
+    });
+    const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
 
     return {
         items,
         page: filters.page,
         pageSize: filters.pageSize,
+        total,
+        totalPages,
     };
 };
 

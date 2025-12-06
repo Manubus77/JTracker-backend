@@ -35,6 +35,15 @@ const listApplications = async ({ userId, status, orderBy, skip, take }) => {
     });
 };
 
+const countApplications = async ({ userId, status }) => {
+    return prisma.jobApplication.count({
+        where: {
+            userId,
+            ...(status ? { status } : {}),
+        },
+    });
+};
+
 const findApplicationByIdForUser = async (id, userId) => {
     return prisma.jobApplication.findFirst({
         where: {
@@ -63,6 +72,7 @@ const deleteApplication = async (id) => {
 module.exports = {
     createApplication,
     listApplications,
+    countApplications,
     findApplicationByIdForUser,
     updateApplication,
     deleteApplication,

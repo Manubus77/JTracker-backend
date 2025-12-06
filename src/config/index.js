@@ -30,6 +30,14 @@ const numberOrDefault = (value, fallback) => {
   return Number.isNaN(parsed) ? fallback : parsed;
 };
 
+const parseOrigins = (value) => {
+  if (!value) return [];
+  return value
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+};
+
 /**
  * Validate configuration values on startup
  * Throws errors if critical security settings are invalid
@@ -72,6 +80,12 @@ const validateConfig = () => {
     errors.push('DATABASE_URL environment variable is required in production');
   }
 
+  // Validate CORS origins in production
+  const origins = parseOrigins(process.env.CORS_ORIGINS || process.env.CORS_ORIGIN);
+  if (environment === 'production' && origins.length === 0) {
+    errors.push('CORS_ORIGINS (comma-separated) is required in production');
+  }
+
   if (errors.length > 0) {
     throw new Error(`Configuration validation failed:\n${errors.join('\n')}`);
   }
@@ -87,13 +101,20 @@ const config = {
   jwtSecret: process.env.JWT_SECRET,
   bcryptSaltRounds: numberOrDefault(process.env.BCRYPT_SALT_ROUNDS, 10),
   jwtExpiresIn: parseInt(process.env.JWT_EXPIRES_IN, 10) || 3600,
+  refreshTokenDays: numberOrDefault(process.env.REFRESH_TOKEN_DAYS, 30),
+  refreshTokenCookieName: process.env.REFRESH_TOKEN_COOKIE_NAME || 'refresh_token',
   // CORS configuration
-  corsOrigin: process.env.CORS_ORIGIN || (environment === 'production' ? undefined : '*'),
+  corsOrigins: parseOrigins(process.env.CORS_ORIGINS || process.env.CORS_ORIGIN),
+  corsWildcard: environment !== 'production',
   // Rate limiting configuration
   rateLimitWindowMs: numberOrDefault(process.env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000), // 15 minutes
   rateLimitMaxLogin: numberOrDefault(process.env.RATE_LIMIT_MAX_LOGIN, 5),
   rateLimitMaxRegister: numberOrDefault(process.env.RATE_LIMIT_MAX_REGISTER, 3),
   rateLimitMaxLogout: numberOrDefault(process.env.RATE_LIMIT_MAX_LOGOUT, 10),
+  rateLimitMaxGeneral: numberOrDefault(process.env.RATE_LIMIT_MAX_GENERAL, 100),
+  rateLimitMaxApplicationsRead: numberOrDefault(process.env.RATE_LIMIT_MAX_APP_READ, 200),
+  rateLimitMaxApplicationsWrite: numberOrDefault(process.env.RATE_LIMIT_MAX_APP_WRITE, 50),
+  rateLimitMaxRefresh: numberOrDefault(process.env.RATE_LIMIT_MAX_REFRESH, 20),
 };
 
 // Validate configuration (skip in test environment to allow flexibility)

@@ -3,6 +3,7 @@ const utils = require('./utils');
 const { z } = require('zod');
 const { registerSchema, loginSchema, tokenSchema, parseWithErrorHandling } = require('./validations');
 const tokenBlacklist = require('./tokenBlacklist');
+const config = require('../../config');
 
 const register = async (data) => {
     // Ensure data is an object and has all required fields (even if undefined)
@@ -35,15 +36,12 @@ const register = async (data) => {
         name: validated.name, // Already trimmed by schema
     });
 
-    // Generate token
-    const token = utils.generateToken({
-        userId: user.id,
-        email: user.email,
-    });
+    const { accessToken, refreshToken } = await createSessionTokens(user.id, user.email);
 
     return {
         user,
-        token,
+        token: accessToken,
+        refreshToken,
     };
 };
 
@@ -78,18 +76,15 @@ const login = async (data) => {
         throw new Error('Invalid credentials');
     }
 
-    // Generate token
-    const token = utils.generateToken({
-        userId: user.id,
-        email: user.email,
-    });
+    const { accessToken, refreshToken } = await createSessionTokens(user.id, user.email);
 
     // Return user without password
     const { password: _, ...userWithoutPassword } = user;
 
     return {
         user: userWithoutPassword,
-        token,
+        token: accessToken,
+        refreshToken,
     };
 };
 
@@ -128,7 +123,7 @@ const getCurrentUser = async (token) => {
     }
 
     // Check if token is blacklisted (after verification to ensure token is valid)
-    if (tokenBlacklist.isBlacklisted(validatedToken)) {
+    if (await tokenBlacklist.isBlacklisted(validatedToken)) {
         throw new Error('Invalid or expired token');
     }
 
@@ -146,7 +141,7 @@ const getCurrentUser = async (token) => {
     return user;
 };
 
-const logout = async (token) => {
+const logout = async (token, refreshTokenPlain = null) => {
     // Validate token using Zod schema
     let validatedToken;
     try {
@@ -191,9 +186,78 @@ const logout = async (token) => {
     const expiresIn = decoded.exp ? Math.max(0, decoded.exp - now) : 3600; // Default 1 hour if no exp
 
     // Add token to blacklist
-    tokenBlacklist.addToBlacklist(validatedToken, expiresIn);
+    await tokenBlacklist.addToBlacklist(validatedToken, expiresIn);
+
+    // Revoke provided refresh token if present
+    if (refreshTokenPlain) {
+        const refreshHash = utils.hashToken(refreshTokenPlain);
+        try {
+            await model.revokeRefreshToken(refreshHash);
+        } catch (err) {
+            // ignore if already revoked/missing
+        }
+    }
 
     return { message: 'Logout successful' };
+};
+
+const refreshSession = async (refreshTokenPlain) => {
+    if (!refreshTokenPlain || typeof refreshTokenPlain !== 'string') {
+        throw new Error('Refresh token is required');
+    }
+
+    const tokenHash = utils.hashToken(refreshTokenPlain);
+    const existing = await model.findRefreshToken(tokenHash);
+    if (!existing || existing.revoked) {
+        throw new Error('Invalid or expired token');
+    }
+    if (existing.expiresAt < new Date()) {
+        await model.revokeRefreshToken(tokenHash);
+        throw new Error('Invalid or expired token');
+    }
+
+    // Rotate
+    const { accessToken, refreshToken, refreshHash } = await createSessionTokens(
+        existing.userId,
+        existing.user.email,
+        tokenHash
+    );
+
+    await model.revokeRefreshToken(tokenHash, refreshHash);
+
+    const { password: _, ...userWithoutPassword } = existing.user;
+
+    return {
+        user: userWithoutPassword,
+        token: accessToken,
+        refreshToken,
+    };
+};
+
+const createSessionTokens = async (userId, email, replacedByHash = null) => {
+    // Generate access token
+    const accessToken = utils.generateToken({
+        userId,
+        email,
+    });
+
+    // Generate refresh token
+    const refreshToken = utils.generateRefreshToken();
+    const refreshHash = utils.hashToken(refreshToken);
+    const expiresAt = new Date(
+        Date.now() + config.refreshTokenDays * 24 * 60 * 60 * 1000
+    );
+
+    await model.createRefreshToken({
+        tokenHash: refreshHash,
+        userId,
+        expiresAt,
+    });
+
+    // Opportunistically clean old tokens
+    await model.cleanupExpiredRefreshTokens();
+
+    return { accessToken, refreshToken, refreshHash };
 };
 
 module.exports = {
@@ -201,5 +265,6 @@ module.exports = {
     login,
     getCurrentUser,
     logout,
+    refreshSession,
 };
 

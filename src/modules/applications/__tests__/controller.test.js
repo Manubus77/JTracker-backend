@@ -22,7 +22,7 @@ describe('Applications Controller (HTTP Layer)', () => {
     beforeEach(async () => {
         await prisma.jobApplication.deleteMany();
         await prisma.user.deleteMany();
-        tokenBlacklist.clearBlacklist();
+        await tokenBlacklist.clearBlacklist();
     });
 
     after(async () => {
@@ -54,6 +54,23 @@ describe('Applications Controller (HTTP Layer)', () => {
         expect(response.body).to.have.property('appliedAt');
     });
 
+    it('allows creating with extended status OFFER', async () => {
+        const token = await buildAuthToken();
+
+        const response = await supertest(app)
+            .post('/applications')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+                position: 'Offer Stage',
+                company: 'Lambda',
+                url: 'https://lambda.example/job',
+                status: 'OFFER',
+            });
+
+        expect(response.status).to.equal(201);
+        expect(response.body.status).to.equal('OFFER');
+    });
+
     it('lists applications ordered by recency by default', async () => {
         const token = await buildAuthToken();
 
@@ -83,6 +100,7 @@ describe('Applications Controller (HTTP Layer)', () => {
 
         expect(listResponse.status).to.equal(200);
         expect(listResponse.body).to.have.property('items');
+        expect(listResponse.body).to.have.property('total');
         expect(listResponse.body.items[0].position).to.equal('Second Role');
         expect(listResponse.body.items[1].position).to.equal('First Role');
     });
@@ -115,6 +133,7 @@ describe('Applications Controller (HTTP Layer)', () => {
 
         expect(listResponse.status).to.equal(200);
         expect(listResponse.body.items).to.have.length(1);
+        expect(listResponse.body.total).to.equal(1);
         expect(listResponse.body.items[0].status).to.equal('INTERVIEWING');
         expect(listResponse.body.items[0].position).to.equal('Interview Role');
     });

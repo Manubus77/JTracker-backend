@@ -9,15 +9,20 @@ const tokenBlacklist = require('../tokenBlacklist');
 
 describe('Auth Controller (HTTP Layer)', () => {
 
-    //Clear table and token blacklist before each test
+    //Clear tables and token blacklist before each test
     beforeEach(async () => {
+        await prisma.refreshToken.deleteMany();
+        await prisma.revokedToken.deleteMany();
         await prisma.user.deleteMany();
-        tokenBlacklist.clearBlacklist();
+        await tokenBlacklist.clearBlacklist();
     });
 
     //Cleanup: Disconnect after all tests run
     after(async () => {
+        await prisma.refreshToken.deleteMany();
+        await prisma.revokedToken.deleteMany();
         await prisma.user.deleteMany();
+        await tokenBlacklist.clearBlacklist();
         await prisma.$disconnect();
     });
    
@@ -469,6 +474,35 @@ describe('Auth Controller (HTTP Layer)', () => {
             expect(response.status).to.equal(200);
             expect(response.body.user).to.not.have.property('password');
             expect(response.body.user).to.not.have.property('passwordHash');
+        });
+    });
+
+    describe('POST /auth/refresh', () => {
+        let loginResponse;
+
+        beforeEach(async () => {
+            await supertest(app).post('/auth/register').send(testUser);
+            loginResponse = await supertest(app)
+                .post('/auth/login')
+                .send({ email: testUser.email, password: testUser.password });
+        });
+
+        it('Refreshes tokens with valid refresh cookie', async () => {
+            const refreshCookie = loginResponse.headers['set-cookie'];
+            const oldAccessToken = loginResponse.body.token;
+
+            const response = await supertest(app)
+                .post('/auth/refresh')
+                .set('Cookie', refreshCookie);
+
+            expect(response.status).to.equal(200);
+            expect(response.body).to.have.property('token');
+            expect(response.body.token).to.not.equal(oldAccessToken);
+        });
+
+        it('Rejects refresh without cookie', async () => {
+            const response = await supertest(app).post('/auth/refresh');
+            expect(response.status).to.equal(401);
         });
     });
 

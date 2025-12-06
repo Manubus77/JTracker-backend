@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const config = require('../../config');
+const crypto = require('crypto');
 
 //Hash a password with bcrypt
 const hashPassword = async (password) => {
@@ -32,8 +33,10 @@ const generateToken = (payload, options = {}) => {
     if (typeof payload !== 'object' || Array.isArray(payload)) {
         throw new Error('Payload must be a non-array object');
     }
+    const jwtid = options.jwtid || crypto.randomUUID();
     return jwt.sign(payload, process.env.JWT_SECRET, {
         expiresIn: options.expiresIn || maxAge,
+        jwtid,
     });
 };
 
@@ -55,9 +58,20 @@ const verifyToken = (token) => {
     }
 };
 
+// Refresh token helpers
+const generateRefreshToken = () => {
+    return crypto.randomBytes(48).toString('base64url');
+};
+
+const hashToken = (token) => {
+    return crypto.createHash('sha256').update(token).digest('hex');
+};
+
 module.exports = {
     hashPassword,
     comparePassword,
     generateToken,
-    verifyToken
+    verifyToken,
+    generateRefreshToken,
+    hashToken
 };

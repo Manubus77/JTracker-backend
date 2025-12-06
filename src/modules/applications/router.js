@@ -20,7 +20,7 @@ const createLimiter = (options) => {
 
 const writeLimiter = createLimiter({
     windowMs: config.rateLimitWindowMs,
-    max: 50,
+    max: config.rateLimitMaxApplicationsWrite,
     message: 'Too many requests, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
@@ -28,7 +28,7 @@ const writeLimiter = createLimiter({
 
 const readLimiter = createLimiter({
     windowMs: config.rateLimitWindowMs,
-    max: 200,
+    max: config.rateLimitMaxApplicationsRead,
     message: 'Too many requests, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,

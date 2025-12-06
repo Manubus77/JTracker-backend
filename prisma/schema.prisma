@@ -24,6 +24,7 @@ enum ApplicationStatus {
   INTERVIEWING
   REJECTED
   OFFER
+  ACCEPTED
 }
 
 enum FileType {
@@ -47,6 +48,7 @@ model User {
 
   applications JobApplication[]
   files        File[]
+  refreshTokens RefreshToken[]
 }
 
 // JOB APPLICATIONS
@@ -62,6 +64,26 @@ model JobApplication {
   user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   files           File[]
+}
+
+// REVOKED TOKENS (access token blacklist)
+model RevokedToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+// REFRESH TOKENS
+model RefreshToken {
+  id         Int      @id @default(autoincrement())
+  tokenHash  String   @unique
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  revoked    Boolean  @default(false)
+  replacedBy String?
+  createdAt  DateTime @default(now())
 }
 
 // FILES

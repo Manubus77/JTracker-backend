@@ -1,7 +1,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const config = require('../../config');
-const { register, login, getCurrentUser, logout } = require('./controller');
+const { register, login, getCurrentUser, logout, refresh } = require('./controller');
 
 const router = express.Router();
 
@@ -43,10 +43,20 @@ const logoutLimiter = createLimiter({
   legacyHeaders: false,
 });
 
+// Rate Limiting - Refresh endpoint
+const refreshLimiter = createLimiter({
+  windowMs: config.rateLimitWindowMs,
+  max: config.rateLimitMaxRefresh,
+  message: 'Too many refresh requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 //HTTP Routes
 router.post('/register', registerLimiter, register);
 router.post('/login', loginLimiter, login);
 router.get('/me', getCurrentUser);
 router.post('/logout', logoutLimiter, logout);
+router.post('/refresh', refreshLimiter, refresh);
 
 module.exports = router;

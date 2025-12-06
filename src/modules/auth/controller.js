@@ -1,6 +1,7 @@
 const service = require('./service');
 const config = require('../../config');
 const { logRegistrationAttempt, logRateLimitExceeded, getClientIp } = require('../../utils/securityLogger');
+const { setRefreshCookie, parseCookies, clearRefreshCookie } = require('../../utils/cookies');
 
 const register = async (req, res, next) => {
     const ip = getClientIp(req);
@@ -18,6 +19,11 @@ const register = async (req, res, next) => {
             password,
             name 
         });
+
+        // Set refresh token cookie (httpOnly)
+        if (result.refreshToken) {
+            setRefreshCookie(res, result.refreshToken);
+        }
         
         // Log successful registration
         logRegistrationAttempt(result.user.email, ip, true);
@@ -93,6 +99,11 @@ const login = async (req, res, next) => {
         const { logSuccessfulLogin } = require('../../utils/securityLogger');
         logSuccessfulLogin(result.user.id, result.user.email, ip);
         
+        // Set refresh token cookie (httpOnly)
+        if (result.refreshToken) {
+            setRefreshCookie(res, result.refreshToken);
+        }
+
         // Success response
         return res.status(200).json({
             user: result.user,
@@ -199,8 +210,16 @@ const logout = async (req, res, next) => {
             return res.status(401).json({ error: 'Token is required' });
         }
         
+        // Extract refresh token cookie (if present)
+        const cookies = parseCookies(req);
+        const refreshToken = cookies[config.refreshTokenCookieName];
+
         // Call service layer (service validates token)
-        const result = await service.logout(token);
+        const result = await service.logout(token, refreshToken);
+
+        if (refreshToken) {
+            clearRefreshCookie(res);
+        }
         
         // Success response
         return res.status(200).json(result);
@@ -236,9 +255,29 @@ const logout = async (req, res, next) => {
     }
 };
 
+const refresh = async (req, res) => {
+    try {
+        const cookies = parseCookies(req);
+        const refreshToken = cookies[config.refreshTokenCookieName];
+        if (!refreshToken) {
+            return res.status(401).json({ error: 'Invalid or expired token' });
+        }
+
+        const result = await service.refreshSession(refreshToken);
+        setRefreshCookie(res, result.refreshToken);
+        return res.status(200).json({
+            user: result.user,
+            token: result.token,
+        });
+    } catch (error) {
+        return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+};
+
 module.exports = {
     register,
     login,
     getCurrentUser,
     logout,
+    refresh,
 };

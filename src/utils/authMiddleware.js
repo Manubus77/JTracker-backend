@@ -26,7 +26,7 @@ const authMiddleware = async (req, res, next) => {
     }
 
     try {
-        if (tokenBlacklist.isBlacklisted(token)) {
+        if (await tokenBlacklist.isBlacklisted(token)) {
             return res.status(401).json({ error: 'Invalid or expired token' });
         }
 
