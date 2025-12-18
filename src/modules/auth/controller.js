@@ -5,9 +5,45 @@ const { setRefreshCookie, parseCookies, clearRefreshCookie } = require('../../ut
 
 const register = async (req, res, next) => {
     const ip = getClientIp(req);
+    // #region agent log
+    const fs = require('fs');
+    const path = require('path');
+    const logPath = path.resolve(process.cwd(), '.cursor', 'debug.log');
+    const logDebug = (location, message, data, hypothesisId) => {
+      try {
+        const logEntry = JSON.stringify({
+          id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          timestamp: Date.now(),
+          location,
+          message,
+          data: data || {},
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: hypothesisId || 'C'
+        }) + '\n';
+        fs.appendFileSync(logPath, logEntry, 'utf8');
+      } catch (err) {}
+    };
+    logDebug('controller.js:6', 'Register function entry', {
+      hasBody: !!req.body,
+      bodyKeys: req.body ? Object.keys(req.body) : [],
+      origin: req.headers.origin || 'no-origin',
+      method: req.method,
+      ip
+    }, 'C');
+    // #endregion agent log
     try {
         // Extract request body (Zod validation handles normalization)
         const { email, password, name } = req.body;
+        // #region agent log
+        logDebug('controller.js:22', 'Request body extracted', {
+          hasEmail: !!email,
+          hasPassword: !!password,
+          hasName: !!name,
+          emailLength: email ? email.length : 0,
+          nameLength: name ? name.length : 0
+        }, 'C');
+        // #endregion agent log
         
         // Note: Email and name normalization is handled by Zod schemas (trim)
         // We only sanitize for XSS prevention if needed, but Zod already trims
@@ -29,6 +65,13 @@ const register = async (req, res, next) => {
         logRegistrationAttempt(result.user.email, ip, true);
         
         // Success response
+        // #region agent log
+        logDebug('controller.js:35', 'Register success response', {
+          userId: result.user?.id,
+          userEmail: result.user?.email,
+          hasToken: !!result.token
+        }, 'C');
+        // #endregion agent log
         return res.status(201).json({
             user: result.user,
             token: result.token,
@@ -36,6 +79,13 @@ const register = async (req, res, next) => {
     } catch (error) {
         // Log failed registration attempt
         const email = req.body?.email;
+        // #region agent log
+        logDebug('controller.js:45', 'Register error caught', {
+          errorMessage: error.message,
+          errorStack: error.stack?.substring(0, 200),
+          email: email || 'no-email'
+        }, 'C');
+        // #endregion agent log
         logRegistrationAttempt(email, ip, false, error.message);
         
         // Map service errors to HTTP status codes
