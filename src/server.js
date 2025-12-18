@@ -59,6 +59,21 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10kb' })); // Limit request body size to prevent DoS
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
+// #region agent log
+// Log all incoming requests for debugging
+app.use((req, res, next) => {
+  // Log important requests (auth and applications)
+  if (req.path.startsWith('/auth/') || req.path.startsWith('/applications/')) {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`, {
+      origin: req.headers.origin || 'no-origin',
+      hasAuth: !!req.headers.authorization,
+      ip: req.ip || req.connection.remoteAddress,
+    });
+  }
+  next();
+});
+// #endregion agent log
+
 // Rate Limiting - General API limit (applies to all routes)
 // Disabled in test environment to avoid test failures
 const generalLimiter = config.isTest 
@@ -69,14 +84,28 @@ const generalLimiter = config.isTest
       message: 'Too many requests from this IP, please try again later.',
       standardHeaders: true,
       legacyHeaders: false,
-      // Skip trust proxy validation since we're behind Render's proxy
-      validate: {
-        trustProxy: false,
+      // Use custom key generator to avoid trust proxy validation issues
+      keyGenerator: (req) => {
+        // Use IP from request, fallback to connection remoteAddress
+        return req.ip || req.connection.remoteAddress || 'unknown';
+      },
+      // Handle rate limit errors gracefully
+      handler: (req, res) => {
+        console.log(`Rate limit exceeded for ${req.ip || req.connection.remoteAddress}`);
+        res.status(429).json({ error: 'Too many requests from this IP, please try again later.' });
       },
     });
 
-// Apply general rate limiting to all routes
-app.use(generalLimiter);
+// Apply general rate limiting to all routes with error handling
+app.use((req, res, next) => {
+  try {
+    generalLimiter(req, res, next);
+  } catch (error) {
+    // If rate limiter throws an error, log it but don't block the request
+    console.error('Rate limiter error:', error.message);
+    next();
+  }
+});
 
 // Routes
 app.use('/auth', authRouter);

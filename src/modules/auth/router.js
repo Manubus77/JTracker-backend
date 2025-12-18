@@ -15,6 +15,11 @@ const createLimiter = (options) => {
   return rateLimit(options);
 };
 
+// Custom key generator to avoid trust proxy validation issues
+const keyGenerator = (req) => {
+  return req.ip || req.connection.remoteAddress || 'unknown';
+};
+
 // Rate Limiting - Login endpoint (stricter)
 const loginLimiter = createLimiter({
   windowMs: config.rateLimitWindowMs,
@@ -23,9 +28,7 @@ const loginLimiter = createLimiter({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Don't count successful logins
-  validate: {
-    trustProxy: false,
-  },
+  keyGenerator,
 });
 
 // Rate Limiting - Register endpoint (stricter)
@@ -35,9 +38,7 @@ const registerLimiter = createLimiter({
   message: 'Too many registration attempts, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  validate: {
-    trustProxy: false,
-  },
+  keyGenerator,
 });
 
 // Rate Limiting - Logout endpoint
@@ -47,9 +48,7 @@ const logoutLimiter = createLimiter({
   message: 'Too many logout requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  validate: {
-    trustProxy: false,
-  },
+  keyGenerator,
 });
 
 // Rate Limiting - Refresh endpoint
@@ -59,9 +58,7 @@ const refreshLimiter = createLimiter({
   message: 'Too many refresh requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  validate: {
-    trustProxy: false,
-  },
+  keyGenerator,
 });
 
 //HTTP Routes
