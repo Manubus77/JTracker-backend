@@ -42,6 +42,15 @@ const listApplications = async (req, res) => {
     }
 };
 
+const getApplication = async (req, res) => {
+    try {
+        const application = await service.getApplication(req.user.id, req.params.id);
+        return res.status(200).json(application);
+    } catch (error) {
+        return errorResponse(res, error);
+    }
+};
+
 const updateApplication = async (req, res) => {
     try {
         const updated = await service.updateApplication(
@@ -67,6 +76,7 @@ const deleteApplication = async (req, res) => {
 module.exports = {
     createApplication,
     listApplications,
+    getApplication,
     updateApplication,
     deleteApplication,
 };

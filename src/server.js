@@ -73,29 +73,34 @@ app.use('/auth', authRouter);
 app.use('/applications', applicationsRouter);
 
 app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    environment: config.env,
-  });
+    res.json({
+        status: 'ok',
+        environment: config.env,
+    });
 });
 
 //Test DB Connection with Prisma
 app.get('/health/db', async (req, res) => {
-  try {
-    const result = await prisma.$queryRaw`SELECT NOW()`;
-    res.json({
-      status: 'ok',
-      database: 'connected',
-      timestamp: result[0].now,
-    });
-  } catch (error) {
-    console.error('Database connection error:', error);
-    res.status(500).json({
-      status: 'error',
-      database: 'disconnected',
-      error: error.message,
-    });
-  }
+    try {
+        const result = await prisma.$queryRaw`SELECT NOW()`;
+        res.json({
+            status: 'ok',
+            database: 'connected',
+            timestamp: result[0].now,
+        });
+    } catch (error) {
+        console.error('Database connection error:', error);
+        res.status(500).json({
+            status: 'error',
+            database: 'disconnected',
+            error: error.message,
+        });
+    }
+});
+
+// 404 handler for unknown API routes (must be last)
+app.use((req, res) => {
+    res.status(404).json({ error: 'Not found' });
 });
 
 const start = async () => {

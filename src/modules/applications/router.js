@@ -5,6 +5,7 @@ const authMiddleware = require('../../utils/authMiddleware');
 const {
     createApplication,
     listApplications,
+    getApplication,
     updateApplication,
     deleteApplication,
 } = require('./controller');
@@ -39,6 +40,7 @@ router.use(authMiddleware);
 
 router.post('/', writeLimiter, createApplication);
 router.get('/', readLimiter, listApplications);
+router.get('/:id', readLimiter, getApplication);
 router.patch('/:id', writeLimiter, updateApplication);
 router.delete('/:id', writeLimiter, deleteApplication);
 

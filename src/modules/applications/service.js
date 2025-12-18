@@ -65,6 +65,21 @@ const listApplications = async (userId, query) => {
     };
 };
 
+const getApplication = async (userId, id) => {
+    if (!userId) throw new Error('User context is required');
+
+    const applicationId = parseWithErrorHandling(idSchema, id);
+    const application = await model.findApplicationByIdForUser(applicationId, userId);
+    
+    if (!application) {
+        const error = new Error('Application not found');
+        error.status = 404;
+        throw error;
+    }
+
+    return application;
+};
+
 const updateApplication = async (userId, id, payload) => {
     if (!userId) throw new Error('User context is required');
 
@@ -101,6 +116,7 @@ const deleteApplication = async (userId, id) => {
 module.exports = {
     createApplication,
     listApplications,
+    getApplication,
     updateApplication,
     deleteApplication,
 };
