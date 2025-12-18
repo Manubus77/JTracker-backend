@@ -23,6 +23,9 @@ const loginLimiter = createLimiter({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Don't count successful logins
+  validate: {
+    trustProxy: false,
+  },
 });
 
 // Rate Limiting - Register endpoint (stricter)
@@ -32,6 +35,9 @@ const registerLimiter = createLimiter({
   message: 'Too many registration attempts, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    trustProxy: false,
+  },
 });
 
 // Rate Limiting - Logout endpoint
@@ -41,6 +47,9 @@ const logoutLimiter = createLimiter({
   message: 'Too many logout requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    trustProxy: false,
+  },
 });
 
 // Rate Limiting - Refresh endpoint
@@ -50,6 +59,9 @@ const refreshLimiter = createLimiter({
   message: 'Too many refresh requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    trustProxy: false,
+  },
 });
 
 //HTTP Routes

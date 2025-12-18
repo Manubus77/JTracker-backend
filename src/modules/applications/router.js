@@ -25,6 +25,9 @@ const writeLimiter = createLimiter({
     message: 'Too many requests, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
+    validate: {
+        trustProxy: false,
+    },
 });
 
 const readLimiter = createLimiter({
@@ -33,6 +36,9 @@ const readLimiter = createLimiter({
     message: 'Too many requests, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
+    validate: {
+        trustProxy: false,
+    },
 });
 
 // All routes require authentication

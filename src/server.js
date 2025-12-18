@@ -10,7 +10,8 @@ const applicationsRouter = require('./modules/applications/router');
 const app = express();
 
 // Trust proxy for Render deployment (needed for rate limiting behind proxy)
-app.set('trust proxy', true);
+// Trust only the first proxy (Render's load balancer)
+app.set('trust proxy', 1);
 
 async function connectPrisma() {  
   try {
@@ -31,10 +32,15 @@ app.use(helmet({
 // CORS Configuration
 const corsOptions = {
   origin: (origin, callback) => {
+    // Allow requests with no origin (same-origin, mobile apps, Postman, etc.)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
     if (config.corsWildcard) {
       callback(null, true);
     } else if (config.corsOrigins.length > 0) {
-      if (origin && config.corsOrigins.includes(origin)) {
+      if (config.corsOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
@@ -63,6 +69,10 @@ const generalLimiter = config.isTest
       message: 'Too many requests from this IP, please try again later.',
       standardHeaders: true,
       legacyHeaders: false,
+      // Skip trust proxy validation since we're behind Render's proxy
+      validate: {
+        trustProxy: false,
+      },
     });
 
 // Apply general rate limiting to all routes
