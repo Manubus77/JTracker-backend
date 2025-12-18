@@ -64,48 +64,59 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use((req, res, next) => {
   // Log important requests (auth and applications)
   if (req.path.startsWith('/auth/') || req.path.startsWith('/applications/')) {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`, {
+    const logData = {
+      timestamp: new Date().toISOString(),
+      method: req.method,
+      path: req.path,
       origin: req.headers.origin || 'no-origin',
       hasAuth: !!req.headers.authorization,
       ip: req.ip || req.connection.remoteAddress,
-    });
+      userAgent: req.headers['user-agent']?.substring(0, 50) || 'no-ua',
+    };
+    console.log(`[${logData.timestamp}] ${logData.method} ${logData.path}`, logData);
   }
+  next();
+});
+
+// Log response errors
+app.use((req, res, next) => {
+  const originalSend = res.send;
+  res.send = function(data) {
+    if (res.statusCode >= 400) {
+      console.error(`[${new Date().toISOString()}] ERROR ${res.statusCode} ${req.method} ${req.path}`, {
+        statusCode: res.statusCode,
+        path: req.path,
+        origin: req.headers.origin || 'no-origin',
+      });
+    }
+    return originalSend.call(this, data);
+  };
   next();
 });
 // #endregion agent log
 
 // Rate Limiting - General API limit (applies to all routes)
 // Disabled in test environment to avoid test failures
-const generalLimiter = config.isTest 
-  ? (req, res, next) => next() // No-op middleware for tests
-  : rateLimit({
-      windowMs: config.rateLimitWindowMs,
-      max: config.rateLimitMaxGeneral, // configurable requests per window
-      message: 'Too many requests from this IP, please try again later.',
-      standardHeaders: true,
-      legacyHeaders: false,
-      // Use custom key generator to avoid trust proxy validation issues
-      keyGenerator: (req) => {
-        // Use IP from request, fallback to connection remoteAddress
-        return req.ip || req.connection.remoteAddress || 'unknown';
-      },
-      // Handle rate limit errors gracefully
-      handler: (req, res) => {
-        console.log(`Rate limit exceeded for ${req.ip || req.connection.remoteAddress}`);
-        res.status(429).json({ error: 'Too many requests from this IP, please try again later.' });
-      },
-    });
+// Wrap in try-catch to handle validation errors gracefully
+let generalLimiter;
+try {
+  generalLimiter = config.isTest 
+    ? (req, res, next) => next() // No-op middleware for tests
+    : rateLimit({
+        windowMs: config.rateLimitWindowMs,
+        max: config.rateLimitMaxGeneral, // configurable requests per window
+        message: 'Too many requests from this IP, please try again later.',
+        standardHeaders: true,
+        legacyHeaders: false,
+      });
+} catch (error) {
+  console.warn('Rate limiter validation error (using no-op):', error.message);
+  // Fallback to no-op if rate limiter fails to initialize
+  generalLimiter = (req, res, next) => next();
+}
 
-// Apply general rate limiting to all routes with error handling
-app.use((req, res, next) => {
-  try {
-    generalLimiter(req, res, next);
-  } catch (error) {
-    // If rate limiter throws an error, log it but don't block the request
-    console.error('Rate limiter error:', error.message);
-    next();
-  }
-});
+// Apply general rate limiting to all routes
+app.use(generalLimiter);
 
 // Routes
 app.use('/auth', authRouter);

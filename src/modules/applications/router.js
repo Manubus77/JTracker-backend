@@ -19,18 +19,12 @@ const createLimiter = (options) => {
     return rateLimit(options);
 };
 
-// Custom key generator to avoid trust proxy validation issues
-const keyGenerator = (req) => {
-    return req.ip || req.connection.remoteAddress || 'unknown';
-};
-
 const writeLimiter = createLimiter({
     windowMs: config.rateLimitWindowMs,
     max: config.rateLimitMaxApplicationsWrite,
     message: 'Too many requests, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator,
 });
 
 const readLimiter = createLimiter({
@@ -39,7 +33,6 @@ const readLimiter = createLimiter({
     message: 'Too many requests, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator,
 });
 
 // All routes require authentication
